@@ -1,6 +1,7 @@
 import src.DQNAgent
 import src.UpdatedDQNAgent
 from src.env import simpleControlProblemDiscrete
+import matplotlib.pyplot as plt
 
 
 def run_dqn(env, agent, episode_n=100):
@@ -22,12 +23,18 @@ def run_dqn(env, agent, episode_n=100):
 
 
 if __name__ == '__main__':
-    dt = 0.05
+    dt = 0.01
     simpleEnv = simpleControlProblemDiscrete.SimpleControlProblemDiscrete(dt=dt)
 
     agent = src.DQNAgent.DQNAgent(action_n=simpleEnv.action_n, state_dim=simpleEnv.state_dim, session_duration=simpleEnv.steps)
-    run_dqn(simpleEnv, agent)
+    stat_1 = run_dqn(simpleEnv, agent)
     print("2 algo")
 
     upd_agent = src.UpdatedDQNAgent.UpdatedDQNAgent(action_n=simpleEnv.action_n, state_dim=simpleEnv.state_dim, session_duration=simpleEnv.steps, dt=dt)
-    run_dqn(simpleEnv, upd_agent)
+    stat_2 = run_dqn(simpleEnv, upd_agent)
+
+
+    plt.plot(stat_1)
+    plt.plot(stat_2)
+    plt.show()
+

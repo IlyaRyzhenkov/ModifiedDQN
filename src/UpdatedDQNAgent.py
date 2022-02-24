@@ -40,6 +40,7 @@ class UpdatedDQNAgent(nn.Module):
         return action
 
     def fit(self, state, action, reward, done, next_state):
+        #Не уверен, что так правильно считать max_action
         max_action = self.calculate_max_action(state)
         self.memory.append([state, action, max_action, reward, done, next_state])
         if len(self.memory) > self.memory_size:
@@ -85,6 +86,7 @@ class UpdatedDQNAgent(nn.Module):
         actions = np.arange(self.action_n)
         max_action = 0
         max_adv = -1000000000000
+        #Считаем argmax по actions
         for action in actions:
             adv = self.adv(torch.cat((state, torch.FloatTensor([action]))))
             if adv > max_adv:
@@ -98,11 +100,3 @@ class UpdatedDQNAgent(nn.Module):
             if dones[i]:
                 next_v[i] = 0
         return next_v
-
-
-    def calculate_expected_q(self, q_values, rewards, next_v):
-        targets = q_values.clone()
-        for i in range(self.batch_size):
-            pass
-        pass
-
