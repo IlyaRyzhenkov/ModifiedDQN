@@ -23,8 +23,7 @@ class UpdatedDQNAgent(nn.Module):
         self.learinig_rate = 1e-2
 
         self.val = network.Network(self.state_dim, self.action_n)
-        #TODO уточнить про размерности
-        self.adv = network.Network(self.state_dim + 1, 1)
+        self.adv = network.Network(self.state_dim, self.action_n)
         self.val_optimizer = torch.optim.Adam(self.val.parameters(), lr=self.learinig_rate)
         self.adv_optimizer = torch.optim.Adam(self.adv.parameters(), lr=self.learinig_rate)
 
@@ -40,7 +39,6 @@ class UpdatedDQNAgent(nn.Module):
         return action
 
     def fit(self, state, action, reward, done, next_state):
-        #Не уверен, что так правильно считать max_action
         max_action = self.calculate_max_action(state)
         self.memory.append([state, action, max_action, reward, done, next_state])
         if len(self.memory) > self.memory_size:
@@ -57,15 +55,24 @@ class UpdatedDQNAgent(nn.Module):
 
             states, actions, max_actions, rewards, dones, next_states = list(zip(*batch))
             states = torch.FloatTensor(states)
-            actions = torch.FloatTensor(actions).unsqueeze(1)
+            actions = torch.LongTensor(actions).unsqueeze(1)
             next_states = torch.FloatTensor(next_states)
-            max_actions = torch.FloatTensor(max_actions).unsqueeze(1)
+            max_actions = torch.LongTensor(max_actions).unsqueeze(1)
             rewards = torch.FloatTensor(rewards).unsqueeze(1)
 
-            v = self.val(states)
-            next_v = self.calculate_next_v(dones, next_states)
-            pre_advs = self.adv(torch.cat((states, actions), 1))
-            pre_max_advs = self.adv(torch.cat((states, max_actions), 1))
+            v_data = self.val(states)
+            next_v_data = self.calculate_next_v(dones, next_states)
+            pre_advs_data = self.adv(states)
+            pre_max_advs_data = self.adv(states)
+            pre_advs = torch.FloatTensor(self.batch_size)
+            pre_max_advs = torch.FloatTensor(self.batch_size)
+            v = torch.FloatTensor(self.batch_size)
+            next_v = torch.FloatTensor(self.batch_size)
+            for i in range(self.batch_size):
+                pre_advs[i] = pre_advs_data[i][actions[i]]
+                pre_max_advs[i] = pre_max_advs_data[i][max_actions[i]]
+                v[i] = v_data[i][actions[i]]
+                next_v[i] = next_v_data[i][actions[i]]
             adv = pre_advs - pre_max_advs
 
             q_values = v + self.dt * adv
@@ -83,15 +90,7 @@ class UpdatedDQNAgent(nn.Module):
 
     def calculate_max_action(self, state):
         state = torch.FloatTensor(state)
-        actions = np.arange(self.action_n)
-        max_action = 0
-        max_adv = -1000000000000
-        #Считаем argmax по actions
-        for action in actions:
-            adv = self.adv(torch.cat((state, torch.FloatTensor([action]))))
-            if adv > max_adv:
-                max_adv = adv
-                max_action = action
+        max_action = torch.argmax(self.adv(state))
         return max_action
 
     def calculate_next_v(self, dones, next_states):

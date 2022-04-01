@@ -4,7 +4,7 @@ from src.env import simpleControlProblemDiscrete
 import matplotlib.pyplot as plt
 
 
-def run_dqn(env, agent, episode_n=100):
+def run_dqn(env, agent, episode_n=150):
     episode_stat = []
     for episode in range(episode_n):
         state = env.reset()
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     stat_2 = run_dqn(simpleEnv, upd_agent)
 
 
-    plt.plot(stat_1)
-    plt.plot(stat_2)
+    plt.plot(stat_1, label="DQN")
+    plt.plot(stat_2, label="Modified DQN")
     plt.show()
 
