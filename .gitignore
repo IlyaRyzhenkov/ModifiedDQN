@@ -5,5 +5,6 @@ src/critics/
 src/agents/
 src/env/
 src/__pycache__/
+images/
 
 
