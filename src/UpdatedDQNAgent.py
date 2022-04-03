@@ -16,7 +16,7 @@ class UpdatedDQNAgent(nn.Module):
         self.epsilon_delta = 1 / session_duration
         self.epsilon = 1
 
-        self.gamma = 0.95
+        self.gamma = 1
         self.memory_size = 10000
         self.memory = []
         self.batch_size = 64
@@ -70,7 +70,7 @@ class UpdatedDQNAgent(nn.Module):
             adv = pre_advs - pre_max_advs
             adv = adv.reshape(self.batch_size, 1)
             q_values = v + self.dt * adv
-            expected_q_values = (rewards * self.dt + self.gamma ** self.dt * next_v).detach()
+            expected_q_values = (rewards + (self.gamma ** self.dt) * next_v).detach()
             critic_value = (q_values - expected_q_values) ** 2
 
             self.val_optimizer.zero_grad()
