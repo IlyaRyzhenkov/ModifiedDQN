@@ -6,7 +6,7 @@ from src import network
 
 
 class DQNAgent(nn.Module):
-    def __init__(self, state_dim, action_n, session_duration):
+    def __init__(self, state_dim, action_n, session_duration, batch_size=64):
         super().__init__()
         self.state_dim = state_dim
         self.action_n = action_n
@@ -18,7 +18,7 @@ class DQNAgent(nn.Module):
         self.gamma = 0.95
         self.memory_size = 10000
         self.memory = []
-        self.batch_size = 64
+        self.batch_size = batch_size
         self.learinig_rate = 1e-2
 
         self.q = network.Network(self.state_dim, self.action_n)
