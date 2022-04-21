@@ -79,4 +79,5 @@ def compare_by_episode_n(batch_size):
 
 
 if __name__ == '__main__':
-    compare_by_episode_n(512)
+    # compare_by_episode_n(512)
+    compare_by_batch_size()

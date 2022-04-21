@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 from torch import nn
 import torch
@@ -6,13 +8,14 @@ from src import network
 
 
 class UpdatedDQNAgent(nn.Module):
-    def __init__(self, state_dim, action_n, session_duration, dt, batch_size=64):
+    def __init__(self, state_dim, action_n, session_duration, dt, batch_size=64, val_tau=1e-2, adv_tau=1e-2):
         super().__init__()
         self.state_dim = state_dim
         self.action_n = action_n
 
         self.session_duration = session_duration
         self.dt = dt
+        # Коэффициент шума при выборе действия
         self.epsilon_delta = 1 / session_duration
         self.epsilon = 1
 
@@ -23,9 +26,15 @@ class UpdatedDQNAgent(nn.Module):
         self.learinig_rate = 1e-2
 
         self.val = network.Network(self.state_dim, 1)
+        self.target_val = deepcopy(self.val)
         self.adv = network.Network(self.state_dim, self.action_n)
+        self.target_adv = deepcopy(self.adv)
         self.val_optimizer = torch.optim.Adam(self.val.parameters(), lr=self.learinig_rate)
         self.adv_optimizer = torch.optim.Adam(self.adv.parameters(), lr=self.learinig_rate)
+
+        # Коэффициенты при скользящем улучшении весов
+        self.val_tau = val_tau
+        self.adv_tau = adv_tau
 
     def get_action(self, state):
         actions = np.arange(self.action_n)
@@ -73,11 +82,9 @@ class UpdatedDQNAgent(nn.Module):
             expected_q_values = (rewards + (self.gamma ** self.dt) * next_v).detach()
             critic_value = (q_values - expected_q_values) ** 2
 
-            self.val_optimizer.zero_grad()
-            self.adv_optimizer.zero_grad()
-            critic_value.mean().backward()
-            self.val_optimizer.step()
-            self.adv_optimizer.step()
+            loss = critic_value.mean()
+            self.update_target_models(self.target_val, self.val, self.val_optimizer, self.target_adv, self.adv,
+                                      self.adv_optimizer, loss)
 
             if self.epsilon > 0.01:
                 self.epsilon -= self.epsilon_delta
@@ -88,8 +95,20 @@ class UpdatedDQNAgent(nn.Module):
         return max_action
 
     def calculate_next_v(self, dones, next_states):
-        next_v = self.val(next_states)
+        next_v = self.target_val(next_states)
         for i in range(self.batch_size):
             if dones[i]:
                 next_v[i] = 0
         return next_v
+
+    def update_target_models(self, target_val, val, val_optimizer, target_adv, adv, adv_optimizer, loss):
+        val_optimizer.zero_grad()
+        adv_optimizer.zero_grad()
+        loss.backward()
+        val_optimizer.step()
+        adv_optimizer.step()
+        for val_target_param, val_param in zip(target_val.parameters(), val.parameters()):
+            val_target_param.data.copy_((1 - self.val_tau) * val_target_param.data + self.val_tau * val_param)
+        for adv_target_param, adv_param in zip(target_adv.parameters(), adv.parameters()):
+            adv_target_param.data.copy_((1 - self.adv_tau) * adv_target_param.data + self.adv_tau * adv_param)
+        return None
